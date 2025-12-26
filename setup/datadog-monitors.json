@@ -2,7 +2,7 @@
     {
         "name": "High LLM Latency",
         "type": "metric alert",
-        "query": "avg(last_5m):avg:voicedoc.request.latency_ms{service:voicedoc-agent} > 10000",
+        "query": "avg(last_5m):avg:voicedoc.request.latency_ms{service:voicedoc-agent,traffic_type:user} > 10000",
         "message": "## LLM Latency Spike Detected\n\n**Signal**: Gemini model response time exceeded 10s.\n\n### 🔧 Runbook for AI Engineer:\n1. Check Google Cloud Console for Vertex AI quotas or regional outages.\n2. Review recently uploaded documents for excessive length or complexity (check `file.size` tag in traces).\n3. Investigate if 'Expressive Mode' (two-call process) is introducing overhead.\n\n@cases-voicedoc-incidents",
         "tags": [
             "service:voicedoc-agent",
@@ -18,7 +18,7 @@
     {
         "name": "Gemini API Error Spike",
         "type": "metric alert",
-        "query": "sum(last_5m):sum:voicedoc.request.errors{service:voicedoc-agent}.as_count() > 5",
+        "query": "sum(last_5m):sum:voicedoc.request.errors{service:voicedoc-agent,traffic_type:user}.as_count() > 5",
         "message": "## Gemini API Error Surge\n\n**Signal**: Multiple failed attempts to generate responses.\n\n### 🔧 Runbook for AI Engineer:\n1. Examine backend logs for `[Route] ❌ Fatal error` or `[Stream] ❌ Generator error`.\n2. Verify `VERTEX_PROJECT_ID` and credentials in Cloud Run environment.\n3. Check if Firestore RUM retrieval is failing (check `rag.error` tag).\n\n@cases-voicedoc-incidents",
         "tags": [
             "service:voicedoc-agent",
@@ -33,7 +33,7 @@
     {
         "name": "LLM Token Burn Rate",
         "type": "metric alert",
-        "query": "sum(last_1h):sum:voicedoc.llm.total_tokens{service:voicedoc-agent}.as_count() > 500000",
+        "query": "sum(last_1h):sum:voicedoc.llm.total_tokens{service:voicedoc-agent,traffic_type:user}.as_count() > 500000",
         "message": "## High Token Consumption Warning\n\n**Signal**: Token usage > 500k in 1 hour.\n\n### 🔧 Runbook for AI Engineer:\n1. Monitor `llm.total_tokens` by user session in Datadog RUM.\n2. Verify if a specific document is causing infinite loops or massive RAG retrieval results.\n3. Check for potential prompt injection attempts in `llm.query` tags.\n\n@cases-voicedoc-incidents",
         "tags": [
             "service:voicedoc-agent",
