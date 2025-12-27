@@ -2,7 +2,7 @@
 
 **Voice‑native document intelligence powered by Google Cloud, ElevenLabs, & Datadog**
 
-VoiceDoc Agent transforms static documents into *living conversations*. Built on **Google Cloud’s partner ecosystem**, the agent enables users to upload text-based documents and interact with them entirely through speech. Using **Gemini on Vertex AI** for reasoning and **ElevenLabs Agents** for expressive, real-time voice, VoiceDoc Agent demonstrates how partner AI services can be composed into a cohesive, production-grade system.
+VoiceDoc Agent transforms static documents into *living conversations*. Built on **Google Cloud’s partner ecosystem**, the agent enables users to upload text-based documents and interact with them entirely through speech. Using **Gemini on Vertex AI** for reasoning and **ElevenLabs Agents** for expressive, real-time voice, VoiceDoc STT & TTS demonstrates how partner AI services can be composed into a cohesive, production-grade system.
 
 The project was created for **AI Partner Catalyst: Accelerate Innovation**, showcasing how Google Cloud partners can accelerate innovation through **voice-first AI experiences** with **Datadog-powered LLM observability**.
 
@@ -258,29 +258,35 @@ Running the generator will surface the following signals:
 All synthetic traffic is tagged with `traffic.type: synthetic` and `traffic.scenario: [scenario-name]`, allowing dashboards to cleanly separate demo traffic from real user activity.
 
 #### 💻 Functional Implementation
-Unlike "aspirational" integrations, VoiceDoc Agent explicitly emits telemetry using `dd-trace`. Here is the core implementation from `src/lib/vertex.ts`:
+Unlike "aspirational" integrations, VoiceDoc Agent explicitly emits telemetry using **Datadog's HTTPS API** (agentless). Here is the core implementation from `src/lib/datadog-metrics.ts`:
 
 ```typescript
-return tracer.trace('gemini.request', async (span) => {
-  try {
-    const result = await chat.sendMessage(query);
-    const response = await result.response;
-    
-    // Explicitly emit token usage for metrics & monitors
-    const usage = response.usageMetadata;
-    if (usage) {
-      span?.setTag('llm.prompt_tokens', usage.promptTokenCount);
-      span?.setTag('llm.completion_tokens', usage.candidatesTokenCount);
-      span?.setTag('llm.total_tokens', usage.totalTokenCount);
+// AGENTLESS METRICS - No agent required, works on Cloud Run
+async function sendMetric(metricName: string, value: number, type: 'g' | 'c' | 'ms', tags: string[] = []) {
+    if (DD_API_KEY) {
+        const series = [{
+            metric: `voicedoc.${metricName}`,
+            points: [[Math.floor(Date.now() / 1000), value]],
+            type: type === 'c' ? 'count' : 'gauge',
+            tags: [...tags, 'service:voicedoc-agent', `env:${process.env.NODE_ENV}`]
+        }];
+
+        const response = await fetch(`https://api.${DD_SITE}/api/v1/series?api_key=${DD_API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ series })
+        });
     }
-    
-    return response.text();
-  } catch (error) {
-    span?.setTag('error', true); // Triggers 'trace.gemini.request.errors'
-    throw error;
-  }
-});
+}
+
+// Usage in API routes
+await MetricsCollector.recordRequestDuration(duration, voice_mode, isNarration, trafficType);
+await MetricsCollector.recordTokens(promptTokens, completionTokens, voice_mode, trafficType);
+await MetricsCollector.recordLLMCost(promptTokens, completionTokens, voice_mode, trafficType);
 ```
+
+> [!NOTE]
+> `dd-trace` is optionally used for span tagging but **not required** for metrics. All metrics are sent directly to Datadog's API via HTTPS, enabling full observability without any agent or sidecar.
 
 ## 📚 Documentation Structure
 
@@ -304,7 +310,6 @@ We follow **least-privilege best practices** for API security.
 
 **Recommended ElevenLabs Scopes:**
 *   ✅ **Text to Speech** → Access
-*   ✅ **ElevenLabs Agents** → Read, Write
 *   ✅ **Voices** → Read
 *   ✅ **Speech to Text** → Access
 *   ❌ **Everything else** → No Access

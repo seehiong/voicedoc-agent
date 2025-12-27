@@ -10,9 +10,6 @@ Your service account needs the following IAM roles to work with VoiceDoc Agent:
 2. **Cloud Datastore User** (`roles/datastore.user`)
    - Needed for: Firestore database access (storing document chunks and metadata)
 
-3. **Storage Object Admin** (`roles/storage.objectAdmin`) - Optional
-   - Needed for: Cloud Storage operations (if you're using GCS for document storage)
-
 ## How to Grant Permissions
 
 ### Using gcloud CLI:
@@ -31,11 +28,6 @@ gcloud projects add-iam-policy-binding $PROJECT_ID `
 gcloud projects add-iam-policy-binding $PROJECT_ID `  
   --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" `
   --role="roles/datastore.user"
-
-# Optional: Grant Storage Object Admin role
-gcloud projects add-iam-policy-binding $PROJECT_ID `  
-  --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" `
-  --role="roles/storage.objectAdmin"
 ```
 
 ### Using Google Cloud Console:

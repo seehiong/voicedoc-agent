@@ -14,8 +14,6 @@ function getFirestore(): Firestore {
     return firestore;
 }
 
-
-
 // Collection name for storing document chunks
 export const CHUNKS_COLLECTION = 'document_chunks';
 // Collection name for storing document metadata (deduplication)
@@ -53,7 +51,6 @@ export async function saveChunks(chunks: Chunk[]) {
         });
     });
 
-    await batch.commit();
     await batch.commit();
 }
 
